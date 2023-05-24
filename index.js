@@ -6,10 +6,18 @@ import auth from "./router/auth.js";
 import user from "./router/user.js";
 import post from "./router/posts.js";
 import comment from "./router/comment.js";
-import http from "http";
+import test from "./router/test.js";
+import video from "./router/video.js";
+import { createServer } from "http";
 import { Server } from "socket.io";
-import { socketServer } from "./socketServer.js";
+
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+  },
+});
 const port = 5000;
 
 const URL =
@@ -18,29 +26,38 @@ const URL =
 app.use(bodyParser.json({ limit: "30mb", extended: true }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "30mb" }));
 app.use(express.json());
-app.use(cors());
-
-// Socket
-// const server = http.createServer(app);
-// const io = new Server(server, {
-//   cors: {
-//     origin: "http://localhost:3000",
-//     methods: ["GET", "POST"],
-//   },
-// });
-
-// io.on("connection", (socket) => {
-//   socketServer(socket);
-// });
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 
 app.use("/auth", auth);
 app.use("/auth", user);
 app.use("/post", post);
 app.use("/comment", comment);
+app.use("/test", test);
+app.use("/video", video);
+
+//socket
+
+io.on("connection", (socket) => {
+  console.log("A client connected");
+
+  socket.on("disconnect", () => {
+    console.log("A client disconnected");
+  });
+
+  // Handle other socket events as needed
+});
+
 mongoose
   .connect(URL, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {
     console.log("Connected to MongoDB");
-    app.listen(port, () => console.log(`Server running on port: ${port}`));
+    httpServer.listen(port, () =>
+      console.log(`Server running on port: ${port}`)
+    );
   })
   .catch((error) => console.log(error.message));
